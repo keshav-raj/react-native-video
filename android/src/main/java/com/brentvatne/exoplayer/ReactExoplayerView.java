@@ -606,7 +606,9 @@ class ReactExoplayerView extends FrameLayout implements
                         ? R.string.error_drm_unsupported_scheme : R.string.error_drm_unknown);
                 eventEmitter.error(getResources().getString(errorStringId), e);
                 return;
+            }
         }
+        // End Drm Learnyst
         player = new ExoPlayer.Builder(getContext(), renderersFactory)
                     .setTrackSelector​(self.trackSelector)
                     .setBandwidthMeter(bandwidthMeter)
@@ -621,6 +623,7 @@ class ReactExoplayerView extends FrameLayout implements
 
         PlaybackParameters params = new PlaybackParameters(rate, 1f);
         player.setPlaybackParameters(params);
+    
     }
 
     private DrmSessionManager initializePlayerDrm(ReactExoplayerView self) {
@@ -678,10 +681,6 @@ class ReactExoplayerView extends FrameLayout implements
         finishPlayerInitialization();
     }
 
-    private DrmSessionManager<FrameworkMediaCrypto> buildDrmSessionManager(UUID uuid,
-                                                                           String licenseUrl, String[] keyRequestPropertiesArray,
-                                                                           String drmOfflineKeySetIdStr) throws UnsupportedDrmException { //sridhar
-
     private void finishPlayerInitialization() {
         // Initializing the playerControlView
         initializePlayerControl();
@@ -690,12 +689,7 @@ class ReactExoplayerView extends FrameLayout implements
         startBufferCheckTimer();
     }
 
-    private DrmSessionManager buildDrmSessionManager(UUID uuid, String licenseUrl, String[] keyRequestPropertiesArray) throws UnsupportedDrmException {
-        return buildDrmSessionManager(uuid, licenseUrl, keyRequestPropertiesArray, 0);
-    }
-
-    private DrmSessionManager buildDrmSessionManager(UUID uuid, String licenseUrl, String[] keyRequestPropertiesArray, int retryCount) throws UnsupportedDrmException {
->>>>>>> 7c48ae7c8544b2b537fb60194e9620b9fcceae52:android/src/main/java/com/brentvatne/exoplayer/ReactExoplayerView.java
+    private DrmSessionManager buildDrmSessionManager(UUID uuid, String licenseUrl, String[] keyRequestPropertiesArray, int retryCount, String drmOfflineKeySetIdStr) throws UnsupportedDrmException { //sridhar
         if (Util.SDK_INT < 18) {
             return null;
         }
@@ -1001,38 +995,37 @@ class ReactExoplayerView extends FrameLayout implements
         //     }
         // }
 
-        switch (focusChange) {
-            case AudioManager.AUDIOFOCUS_LOSS:
-                this.hasAudioFocus = false;
-                eventEmitter.audioFocusChanged(false);
-                pausePlayback();
-                audioManager.abandonAudioFocus(this);
-                break;
-            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                eventEmitter.audioFocusChanged(false);
-                break;
-            case AudioManager.AUDIOFOCUS_GAIN:
-                this.hasAudioFocus = true;
-                eventEmitter.audioFocusChanged(true);
-                break;
-            default:
-                break;
-        }
+        // switch (focusChange) {
+        //     case AudioManager.AUDIOFOCUS_LOSS:
+        //         this.hasAudioFocus = false;
+        //         eventEmitter.audioFocusChanged(false);
+        //         pausePlayback();
+        //         audioManager.abandonAudioFocus(this);
+        //         break;
+        //     case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+        //         eventEmitter.audioFocusChanged(false);
+        //         break;
+        //     case AudioManager.AUDIOFOCUS_GAIN:
+        //         this.hasAudioFocus = true;
+        //         eventEmitter.audioFocusChanged(true);
+        //         break;
+        //     default:
+        //         break;
+        // }
 
-        if (player != null) {
-            if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
-                // Lower the volume
-                if (!muted) {
-                    player.setVolume(audioVolume * 0.8f);
-                }
-            } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
-                // Raise it back to normal
-                if (!muted) {
-                    player.setVolume(audioVolume * 1);
-                }
-            }
-        }
->>>>>>> 7c48ae7c8544b2b537fb60194e9620b9fcceae52:android/src/main/java/com/brentvatne/exoplayer/ReactExoplayerView.java
+        // if (player != null) {
+        //     if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
+        //         // Lower the volume
+        //         if (!muted) {
+        //             player.setVolume(audioVolume * 0.8f);
+        //         }
+        //     } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
+        //         // Raise it back to normal
+        //         if (!muted) {
+        //             player.setVolume(audioVolume * 1);
+        //         }
+        //     }
+        // }
     }
 
     // AudioBecomingNoisyListener implementation
