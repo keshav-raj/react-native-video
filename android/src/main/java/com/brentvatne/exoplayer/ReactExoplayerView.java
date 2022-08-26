@@ -595,11 +595,11 @@ class ReactExoplayerView extends FrameLayout implements
                 new DefaultRenderersFactory(getContext())
                         .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF);
         // DRM Learnyst
-        DrmSessionManager<FrameworkMediaCrypto> drmSessionManager = null;
+        DrmSessionManager drmSessionManager = null;
         if (self.drmUUID != null) {
             try {
                 drmSessionManager = buildDrmSessionManager(self.drmUUID, self.drmLicenseUrl,
-                        self.drmLicenseHeader, self.drmOfflineKeySetIdStr); //sridhar
+                        self.drmLicenseHeader, 0, self.drmOfflineKeySetIdStr); //sridhar
             } catch (UnsupportedDrmException e) {
                 int errorStringId = Util.SDK_INT < 18 ? R.string.error_drm_not_supported
                         : (e.reason == UnsupportedDrmException.REASON_UNSUPPORTED_SCHEME
@@ -689,54 +689,54 @@ class ReactExoplayerView extends FrameLayout implements
         startBufferCheckTimer();
     }
 
+    private DrmSessionManager buildDrmSessionManager(UUID uuid, String licenseUrl, String[] keyRequestPropertiesArray) throws UnsupportedDrmException {
+        return buildDrmSessionManager(uuid, licenseUrl, keyRequestPropertiesArray, 0, null);
+    }
+
     private DrmSessionManager buildDrmSessionManager(UUID uuid, String licenseUrl, String[] keyRequestPropertiesArray, int retryCount, String drmOfflineKeySetIdStr) throws UnsupportedDrmException { //sridhar
         if (Util.SDK_INT < 18) {
             return null;
         }
+        HttpMediaDrmCallback drmCallback;
         try {
-            HttpMediaDrmCallback drmCallback = new HttpMediaDrmCallback(licenseUrl,
+            drmCallback = new HttpMediaDrmCallback(licenseUrl,
                     buildHttpDataSourceFactory(false));
             if (keyRequestPropertiesArray != null) {
                 for (int i = 0; i < keyRequestPropertiesArray.length - 1; i += 2) {
                     drmCallback.setKeyRequestProperty(keyRequestPropertiesArray[i], keyRequestPropertiesArray[i + 1]);
                 }
             }
+            /* Sridhar - start */
+            releaseMediaDrm();
             FrameworkMediaDrm mediaDrm = FrameworkMediaDrm.newInstance(uuid);
-            if (hasDrmFailed) {
-                // When DRM fails using L1 we want to switch to L3
-                mediaDrm.setPropertyString("securityLevel", "L3");
+            DefaultDrmSessionManager drmSessionManager;
+            // if (hasDrmFailed) {
+            //     // When DRM fails using L1 we want to switch to L3
+            //     mediaDrm.setPropertyString("securityLevel", "L3");
+            // }
+            drmSessionManager = new DefaultDrmSessionManager(uuid,mediaDrm, drmCallback, null, false, 3);
+
+            if (drmOfflineKeySetIdStr != null) {
+                byte[] offlineAssetKeyId = Base64.decode(drmOfflineKeySetIdStr, Base64.DEFAULT);
+                if ((offlineAssetKeyId != null) && (offlineAssetKeyId.length > 0)) {
+                    drmSessionManager.setMode(DefaultDrmSessionManager.MODE_QUERY, offlineAssetKeyId);
+                    return drmSessionManager;
+                }
             }
-            return new DefaultDrmSessionManager(uuid, mediaDrm, drmCallback, null, false, 3);
+            return drmSessionManager;
+            /* Sridhar - end */
         } catch(UnsupportedDrmException ex) {
             // Unsupported DRM exceptions are handled by the calling method
             throw ex;
         } catch (Exception ex) {
             if (retryCount < 3) {
                 // Attempt retry 3 times in case where the OS Media DRM Framework fails for whatever reason
-                return buildDrmSessionManager(uuid, licenseUrl, keyRequestPropertiesArray, ++retryCount);
+                return buildDrmSessionManager(uuid, licenseUrl, keyRequestPropertiesArray, ++retryCount, null);
             }
             // Handle the unknow exception and emit to JS
             eventEmitter.error(ex.toString(), ex, "3006");
             return null;
         }
-
-        /* Sridhar - start */
-        releaseMediaDrm();
-        mediaDrm = FrameworkMediaDrm.newInstance(uuid);
-        DefaultDrmSessionManager<FrameworkMediaCrypto> drmSessionManager;
-        drmSessionManager = new DefaultDrmSessionManager<>(uuid,
-                mediaDrm, drmCallback, null, false, 3);
-
-        if (drmOfflineKeySetIdStr != null) {
-            byte[] offlineAssetKeyId = Base64.decode(drmOfflineKeySetIdStr, Base64.DEFAULT);
-            if ((offlineAssetKeyId != null) && (offlineAssetKeyId.length > 0)) {
-                drmSessionManager.setMode(DefaultDrmSessionManager.MODE_QUERY, offlineAssetKeyId);
-                return drmSessionManager;
-            }
-        }
-
-        return drmSessionManager;
-        /* Sridhar - end */
     }
 
     private MediaSource buildMediaSource(Uri uri, String overrideExtension, DrmSessionManager drmSessionManager) {
@@ -1404,19 +1404,6 @@ class ReactExoplayerView extends FrameLayout implements
             default:
                 break;
         }
-        if (cause instanceof android.media.MediaCodec.CryptoException) {
-                ex = null;
-                errorString = getResources().getString(R.string.crypto_exception);
-        }
-
-        /* Sridhar start*/
-        if (errorString != null) {
-            eventEmitter.error(errorString, ex);
-        } else {
-            errorString = "Unknown exception: " + getStackTrace(e) ;
-            eventEmitter.error("Unknown exception", null);
-        }
-        /* Sridhar end*/
 
         eventEmitter.error(errorString, e, errorCode);
 
